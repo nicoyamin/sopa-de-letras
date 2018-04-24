@@ -1,59 +1,59 @@
-<p align="center"><img src="https://laravel.com/assets/img/components/logo-laravel.svg"></p>
+Para verificar el proceso de resolucion del problema, resultan de interes tres archivos:
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+1-welcome.blade.php ubicado en resources\views\welcome.blade.php - Este archivo es basicamente la pagina home de Laravel,
+rapídamente modificada para reflejar las necesidades del problema. Aqui se muestran las sopas de letras para resolver, y se expone
+la solucion una vez seleccionada la sopa.Ademas, hay un input donde se observa la palabra a buscar por defecto (OIE), que ofrece la
+oportunidad de modificar el string a buscar, incluyendo la busqueda de un solo caracter.
 
-## About Laravel
+2-selectSopa.js ubicado en public\js\selectSopa.js - En este archivo estan los hardcode de las sopas de letras. Ademas, el manejo
+de ciertos componentes y efectos graficos y, por supuesto, la peticion AJAX, que envia la sopa seleccionada y el string a buscar
+al controlador correspondiente para su procesamiento. Al retornar la respuesta, la muestra en la vista.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as:
+3-AjaxController.php ubicado en Http\Controllers\AjaxController.php - El archivo mas importante, y donde se realiza la resolucion
+del problema. Luego de considerar varias opciones para afrontar la situacion planteada, se opto por la elaboracion de un unico
+metodo para procesar la respuesta.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Acerca de la solucion:
 
-Laravel is accessible, yet powerful, providing tools needed for large, robust applications.
+*La resolucion se ha desarrollado de tal manera que puede extenderse de manera general a cualquier caso planteado. Por ejemplo,
+pueden modificarse las sopas de letras en el archivo selectSopa.js, o ingresar una palabra distinta a buscar y el procedimiento se mantiene igual, devolviendo una respuesta correcta.
 
-## Learning Laravel
+*Basicamente, la estrategia consiste en tomar la palabra a buscar (a partir de ahora, keyword) y usar una "ventana movil", con una
+longitud igual a la de la keyword. Se empieza a recorrer la sopa de letras por fila, y se compara cada elemento con la primera letra
+de la keyword. Al encontrar una coincidencia, se empieza  a verificar cada una de las direcciones necesarias. Para ello, se recurre 
+a dos arrays auxiliares, correspondientes a la posicion en X, y a la posicion en Y. Estas direcciones son (siempre a partir de la
+posicion donde se encontro una coincidencia):
+    -Esquina superior izquierda (-1,-1)
+    -Arriba (-1,0)
+    -Esquina superior derecha (-1,1)
+    -Izquierda (0,-1)
+    -Derecha (0,1)
+    -Esquina inferior izquierda (1,-1)
+    -Abajo (1,0)
+    -Esquina inferior derecha (1,1)
+ Por cada direccion, se toman tantos caracteres como sean necesarios para llenar la ventana, es decir, para igualar la longitud de 
+ la keyword. Una vez armada esta palabra, se la compara con la keyword. Si son iguales, se suma 1 a la variable que cuenta las 
+ coincidencias. Este proceso se repite hasta que se recorre toda la matriz, y al final se devuelve el total de coincidencias.
+ 
+ *El principal inconveniente de este metodo es que se formará una palabra completa y recien se comparará, cuando a veces la segunda 
+ letra ya es distinta a la keyword. La ventaja es que se ahorra espacio en arrays auxiliares que serian usados para almacenar
+ cada uno de los caracteres de la keyword de manera individual (los cuales se utilizan a efectos de comparacion), y se minimiza el uso
+ de operaciones poco optimas, como substr().
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of any modern web application framework, making it a breeze to get started learning the framework.
+*Otro metodo considerado (luego descartado), consiste en usar dos array como pilas o stacks, uno conteniendo los caracteres que 
+conforman la keyword, y otro inicialmente vacio. Al recorrer la matriz, si se encuentra la primera letra, se quita de un stack y se 
+agrega al otro, y se sigue explorando en misma direcciones. Al continuar las coincidencias, se quitan mas caracteres del stack keyword
+hasta que queda vacia, momento en que se tiene una coincidencia. Si una letra no coincide, se reinician ambos stack y se prosigue por
+la siguiente direccion. El problema de este metodo es que las operaciones de remover/añadir el primer elemento a los stack (shift y
+unshift), son caras en cuanto a rendimiento.
 
-If you're not in the mood to read, [Laracasts](https://laracasts.com) contains over 1100 video tutorials on a range of topics including Laravel, modern PHP, unit testing, JavaScript, and more. Boost the skill level of yourself and your entire team by digging into our comprehensive video library.
+*Un tercer metodo involucraba el uso de una funcion recursiva, que seria invocada luego de encontrar coincidencia con la primera letra
+de la keyword. Se pasan como parametros la matriz, la posicion de la coincidencia y coordenadas de los arrays X e Y para seguir
+una direccion. Esta funcion se llamaba a si misma, variando el caracter de la keyword a comparar para alcanzar el caso base (es decir, 
+no hay mas caracteres a comparar en la keyword, momento en el cual se tiene una coincidencia), y en caso de que una comparacion fallase,
+se escapa de las llamadas y se continuaba con la siguiente direccion. Las desventajas de esta opcion son la gran cantidad de parametros
+a enviar a la funcion recursiva, ademas de un potencial alto numero de llamadas si la keyword era muy larga.
 
-## Laravel Sponsors
+Este fue el proceso de resolucion. 
+Por cualquier duda o consulta, no duden en contactarme.
 
-We would like to extend our thanks to the following sponsors for helping fund on-going Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell):
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Pulse Storm](http://www.pulsestorm.net/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
